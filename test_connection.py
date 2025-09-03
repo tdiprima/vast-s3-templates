@@ -1,6 +1,5 @@
 import os
 
-from botocore.exceptions import EndpointConnectionError, NoCredentialsError
 from dotenv import load_dotenv
 
 from s3_client import create_s3_client
@@ -13,7 +12,7 @@ def test_s3_connection():
     s3_client = create_s3_client()
     bucket_name = os.getenv("VAST_BUCKET_NAME", "my-vast-bucket")
 
-    print(f"🧪 Testing S3 connection...")
+    print("🧪 Testing S3 connection...")
     print(f"   Bucket: {bucket_name}")
 
     # Test 1: Try to list all buckets (this doesn't require a specific bucket)

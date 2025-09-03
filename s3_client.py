@@ -1,7 +1,6 @@
 import os
 
 import boto3
-from botocore.client import Config as ClientConfig
 from botocore.config import Config
 from dotenv import load_dotenv
 

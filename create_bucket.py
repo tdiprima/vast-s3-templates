@@ -1,6 +1,5 @@
 import os
 
-import boto3
 from botocore.exceptions import EndpointConnectionError, NoCredentialsError
 from dotenv import load_dotenv
 

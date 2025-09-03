@@ -33,7 +33,7 @@ def generate_presigned_url(bucket_name, object_key, expiration=3600):
             Params={"Bucket": bucket_name, "Key": object_key},
             ExpiresIn=expiration,
         )
-        print(f"✅ Presigned URL generated:")
+        print("✅ Presigned URL generated:")
         print(f"   {presigned_url}")
         return presigned_url
     except (NoCredentialsError, EndpointConnectionError) as e:

@@ -31,7 +31,7 @@ def list_objects(bucket_name):
                     f"  📄 {obj['Key']} | {obj['Size']} bytes | {obj['LastModified']}"
                 )
         else:
-            print(f"  💭 No objects found in bucket.")
+            print("  💭 No objects found in bucket.")
 
     except (NoCredentialsError, EndpointConnectionError) as e:
         print(f"🚫 Connection failed: {e}")
@@ -52,7 +52,7 @@ def list_objects(bucket_name):
                         f"  📄 {obj['Key']} | {obj['Size']} bytes | {obj['LastModified']}"
                     )
             else:
-                print(f"  💭 No objects found in bucket.")
+                print("  💭 No objects found in bucket.")
         except Exception as e2:
             print(f"❌ Error listing objects: {e2}")
 
