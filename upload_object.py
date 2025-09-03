@@ -23,8 +23,17 @@ def upload_object(bucket_name, object_key, file_content):
     print(f"   Content size: {len(file_content)} bytes")
 
     try:
-        s3_client.put_object(Bucket=bucket_name, Key=object_key, Body=file_content)
+        # Use put_object without any checksum parameters
+        # Don't specify ChecksumAlgorithm or any checksum-related parameters
+        response = s3_client.put_object(
+            Bucket=bucket_name,
+            Key=object_key,
+            Body=file_content,
+            # Explicitly set content length to avoid chunked encoding
+            ContentLength=len(file_content),
+        )
         print(f"✅ Object '{object_key}' uploaded successfully.")
+        print(f"   ETag: {response.get('ETag', 'N/A')}")
     except (NoCredentialsError, EndpointConnectionError) as e:
         print(f"🚫 Connection failed: {e}")
         print(
@@ -36,7 +45,7 @@ def upload_object(bucket_name, object_key, file_content):
 
 if __name__ == "__main__":
     bucket_name = os.getenv("VAST_BUCKET_NAME", "my-vast-bucket")
-    object_key = "example.txt"
+    object_key = "Tammy-File.txt"
     file_content = b"This is some sample data for Vast S3."
 
     upload_object(bucket_name, object_key, file_content)
