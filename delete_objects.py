@@ -59,4 +59,4 @@ if __name__ == "__main__":
     delete_object(bucket_name, object_key)
 
     # Delete the entire bucket (ensure it's empty first)
-    delete_bucket(bucket_name)
+    # delete_bucket(bucket_name)

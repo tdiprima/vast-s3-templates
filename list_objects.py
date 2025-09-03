@@ -10,7 +10,7 @@ load_dotenv()
 
 def list_objects(bucket_name):
     """
-    List all objects in an S3 bucket.
+    List all objects in an S3 bucket using the V1 API for VAST compatibility.
 
     Args:
         bucket_name (str): Name of the bucket to list objects from
@@ -20,19 +20,41 @@ def list_objects(bucket_name):
     print(f"📁 Listing objects in bucket '{bucket_name}'")
 
     try:
-        response = s3_client.list_objects_v2(Bucket=bucket_name)
+        # Use list_objects (V1) instead of list_objects_v2
+        # V1 is more widely supported by S3-compatible systems
+        response = s3_client.list_objects(Bucket=bucket_name)
+
         if "Contents" in response:
+            print(f"  Found {len(response['Contents'])} objects:")
             for obj in response["Contents"]:
                 print(
                     f"  📄 {obj['Key']} | {obj['Size']} bytes | {obj['LastModified']}"
                 )
         else:
             print(f"  💭 No objects found in bucket.")
+
     except (NoCredentialsError, EndpointConnectionError) as e:
         print(f"🚫 Connection failed: {e}")
         print(f"📝 Would list objects in '{bucket_name}' (if credentials were valid)")
     except Exception as e:
-        print(f"❌ Error listing objects: {e}")
+        # If V1 also fails, try a more basic approach
+        print(f"⚠️  Standard list failed: {e}")
+        print("Trying alternative method...")
+        try:
+            # Try with minimal parameters
+            response = s3_client.list_objects(
+                Bucket=bucket_name, MaxKeys=1000  # Explicit limit
+            )
+            if "Contents" in response:
+                print(f"  Found {len(response['Contents'])} objects:")
+                for obj in response["Contents"]:
+                    print(
+                        f"  📄 {obj['Key']} | {obj['Size']} bytes | {obj['LastModified']}"
+                    )
+            else:
+                print(f"  💭 No objects found in bucket.")
+        except Exception as e2:
+            print(f"❌ Error listing objects: {e2}")
 
 
 if __name__ == "__main__":
