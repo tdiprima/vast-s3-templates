@@ -1,6 +1,11 @@
+import os
+
 from botocore.exceptions import EndpointConnectionError, NoCredentialsError
+from dotenv import load_dotenv
 
 from s3_client import create_s3_client
+
+load_dotenv()
 
 
 def list_objects(bucket_name):
@@ -31,5 +36,5 @@ def list_objects(bucket_name):
 
 
 if __name__ == "__main__":
-    bucket_name = "my-vast-bucket"
+    bucket_name = os.getenv("VAST_BUCKET_NAME", "my-vast-bucket")
     list_objects(bucket_name)

@@ -1,6 +1,11 @@
+import os
+
 from botocore.exceptions import EndpointConnectionError, NoCredentialsError
+from dotenv import load_dotenv
 
 from s3_client import create_s3_client
+
+load_dotenv()
 
 
 def download_object(bucket_name, object_key, local_file_path):
@@ -33,7 +38,7 @@ def download_object(bucket_name, object_key, local_file_path):
 
 
 if __name__ == "__main__":
-    bucket_name = "my-vast-bucket"
+    bucket_name = os.getenv("VAST_BUCKET_NAME", "my-vast-bucket")
     object_key = "example.txt"
     local_file_path = "downloaded_example.txt"
 

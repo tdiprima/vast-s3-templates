@@ -1,6 +1,11 @@
+import os
+
 from botocore.exceptions import EndpointConnectionError, NoCredentialsError
+from dotenv import load_dotenv
 
 from s3_client import create_s3_client
+
+load_dotenv()
 
 
 def generate_presigned_url(bucket_name, object_key, expiration=3600):
@@ -43,6 +48,6 @@ def generate_presigned_url(bucket_name, object_key, expiration=3600):
 
 
 if __name__ == "__main__":
-    bucket_name = "my-vast-bucket"
+    bucket_name = os.getenv("VAST_BUCKET_NAME", "my-vast-bucket")
     object_key = "example.txt"
     generate_presigned_url(bucket_name, object_key)
