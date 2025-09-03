@@ -42,7 +42,7 @@ def create_s3_client():
         endpoint_url=endpoint_url,
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
-        region_name="us-east-1",
+        region_name=os.getenv("AWS_REGION", "us-east-1"),
         config=config,
         # Disable all optional S3 features
         use_ssl=True,
