@@ -3,6 +3,12 @@ The corruption is happening with regular file uploads too - the S3 storage is de
 adding metadata (c\r\n prefix and checksum suffix) to all files.
 """
 import os
+import sys
+from pathlib import Path
+
+# Add parent directory to path so we can import s3_client
+sys.path.append(str(Path(__file__).parent.parent))
+
 from dotenv import load_dotenv
 from s3_client import create_s3_client
 
