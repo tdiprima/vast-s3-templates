@@ -31,17 +31,14 @@ s3_client.put_object(
 print(f"Sample data uploaded to Vast S3: s3://{BUCKET_NAME}/{OBJECT_KEY}")
 
 response = s3_client.get_object(Bucket=BUCKET_NAME, Key=OBJECT_KEY)
-raw_content = response['Body'].read().decode('utf-8')
+raw_content = response["Body"].read().decode("utf-8")
 print("\nRaw content from S3:")
 print(repr(raw_content))
 
-csv_content = raw_content.split('\n')
-csv_lines = []
-for line in csv_content:
-    if line.strip() and ',' in line and not line.startswith('x-amz-'):
-        csv_lines.append(line.strip())
+csv_content = raw_content.split("\n")
+csv_lines = [line.strip() for line in csv_content if line.strip() and "," in line and not line.startswith("x-amz-")]
 
-clean_csv = '\n'.join(csv_lines)
+clean_csv = "\n".join(csv_lines)
 print("\nCleaned CSV content:")
 print(repr(clean_csv))
 

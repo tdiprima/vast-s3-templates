@@ -1,7 +1,8 @@
 """
-The corruption is happening with regular file uploads too - the S3 storage is definitely 
+The corruption is happening with regular file uploads too - the S3 storage is definitely
 adding metadata (c\r\n prefix and checksum suffix) to all files.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
+
 from s3_client import create_s3_client
 
 load_dotenv()
@@ -21,26 +23,22 @@ S3_KEY = "uploads/testing.txt"
 s3_client = create_s3_client()
 
 # Read local file content
-with open(LOCAL_FILE, 'r') as f:
-    file_content = f.read()
+file_content = Path(LOCAL_FILE).read_text()
 
 print("Original file content:")
 print(repr(file_content))
 
 # Upload to S3
-with open(LOCAL_FILE, 'rb') as f:
+with open(LOCAL_FILE, "rb") as f:
     s3_client.upload_fileobj(
-        f, 
-        BUCKET_NAME, 
-        S3_KEY,
-        ExtraArgs={'ContentType': 'text/plain'}
+        f, BUCKET_NAME, S3_KEY, ExtraArgs={"ContentType": "text/plain"}
     )
 
 print(f"\nFile uploaded to: s3://{BUCKET_NAME}/{S3_KEY}")
 
 # Download and read back
 response = s3_client.get_object(Bucket=BUCKET_NAME, Key=S3_KEY)
-downloaded_content = response['Body'].read().decode('utf-8')
+downloaded_content = response["Body"].read().decode("utf-8")
 
 print("\nDownloaded content from S3:")
 print(repr(downloaded_content))
