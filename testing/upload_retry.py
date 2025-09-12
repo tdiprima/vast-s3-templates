@@ -1,9 +1,13 @@
 import os
+import sys
 import time
+from pathlib import Path
 from random import uniform
 
-from botocore.exceptions import EndpointConnectionError, NoCredentialsError, ClientError
+from botocore.exceptions import (ClientError, EndpointConnectionError, NoCredentialsError)
 from dotenv import load_dotenv
+
+sys.path.append(str(Path(__file__).parent.parent))
 
 from s3_client import create_s3_client
 
@@ -21,7 +25,7 @@ def test_connection(s3_client):
         bool: True if connection is successful, False otherwise
     """
     try:
-        response = s3_client.list_buckets()
+        s3_client.list_buckets()
         print("🔗 S3 connection test successful")
         return True
     except (NoCredentialsError, EndpointConnectionError) as e:
@@ -29,7 +33,7 @@ def test_connection(s3_client):
         return False
     except ClientError as e:
         error_code = e.response.get('Error', {}).get('Code', '')
-        if error_code in ['InvalidAccessKeyId', 'SignatureDoesNotMatch', 'AccessDenied']:
+        if error_code in ('InvalidAccessKeyId', 'SignatureDoesNotMatch', 'AccessDenied'):
             print(f"🔐 Authentication failed: {e.response.get('Error', {}).get('Message', str(e))}")
         else:
             print(f"⚠️  Connection test returned error: {e.response.get('Error', {}).get('Message', str(e))}")
