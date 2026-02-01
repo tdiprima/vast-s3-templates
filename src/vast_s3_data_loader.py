@@ -36,7 +36,11 @@ print("\nRaw content from S3:")
 print(repr(raw_content))
 
 csv_content = raw_content.split("\n")
-csv_lines = [line.strip() for line in csv_content if line.strip() and "," in line and not line.startswith("x-amz-")]
+csv_lines = [
+    line.strip()
+    for line in csv_content
+    if line.strip() and "," in line and not line.startswith("x-amz-")
+]
 
 clean_csv = "\n".join(csv_lines)
 print("\nCleaned CSV content:")

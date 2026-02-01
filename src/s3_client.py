@@ -33,7 +33,10 @@ def create_s3_client():
             "use_accelerate_endpoint": False,
         },
         # Disable retries to see errors immediately
-        retries={"max_attempts": 0},
+        # retries={"max_attempts": 0},
+        # Use default retry behavior
+        # retries={"max_attempts": 1, "mode": "standard"},
+        retries={"max_attempts": 3, "mode": "adaptive"},
     )
 
     # Create the client
