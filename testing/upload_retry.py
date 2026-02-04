@@ -83,7 +83,8 @@ def upload_object(bucket_name, object_key, file_content, max_retries=3):
             error_message = e.response.get('Error', {}).get('Message', str(e))
             
             if error_code == 'InternalError' and attempt < max_retries:
-                wait_time = (2 ** attempt) + uniform(0, 1)  # Exponential backoff with jitter
+                # Exponential backoff with jitter
+                wait_time = (2 ** attempt) + uniform(0, 1)  # nosec B311
                 print(f"⚠️  Internal server error (attempt {attempt + 1}/{max_retries + 1}). Retrying in {wait_time:.2f}s...")
                 time.sleep(wait_time)
                 continue
