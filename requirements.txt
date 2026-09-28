@@ -1,0 +1,6 @@
+boto3>=1.43.103
+python-dotenv>=1.2.3
+pandas>=3.0.6
+pyarrow>=25.0.1
+# Optional: lets pandas read s3:// URLs directly (see examples/pandas_load.py)
+# s3fs>=2026.1.0

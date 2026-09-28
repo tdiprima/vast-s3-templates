@@ -1,114 +1,122 @@
-# VAST S3 Templates
+# vast-s3-templates
 
-Ready-to-use Python templates for working with VAST Data's S3-compatible object storage.
+boto3 templates that actually work against **VAST Data** S3.
 
-## Why VAST S3 Is Different
+Stock `boto3 >= 1.36` breaks against VAST (and most non-AWS S3 backends):
+uploads come back a few bytes larger than the source with
+`x-amz-checksum-crc32:…` text leaked into the tail of the object, and
+downloads can fail checksum validation. This repo ships a hardened client
+factory that turns those AWS-only behaviours off, plus copy-paste scripts
+for the everyday operations.
 
-VAST Data exposes an S3-compatible API, but "compatible" does a lot of heavy lifting. Standard boto3 clients send checksum headers, chunked transfer encoding, and API calls that VAST doesn't fully support. The result: uploads get corrupted with injected metadata, downloads come back with `x-amz-` prefixes in the content, and `list_objects_v2` calls fail silently.
+Tested with **boto3 1.43.103**, pandas 3.0, pyarrow 25, Python 3.10+.
 
-If you've ever pulled a CSV from VAST and found `c\r\n` prepended to your data, you've hit this.
+## What the hardened client fixes
 
-## What This Repo Does
+| Problem on VAST | Cause (boto3 default) | Fix in `vast_s3/client.py` |
+|---|---|---|
+| Corrupted uploads, size off by ~40–60 bytes, `x-amz-checksum-crc32` inside the file | Trailing CRC32 checksum sent with `Content-Encoding: aws-chunked` | `request_checksum_calculation="when_required"` |
+| Spurious "checksum mismatch" on GET | Client requests + validates response checksums | `response_checksum_validation="when_required"` |
+| `bucket.vast-host` DNS failures | Virtual-hosted addressing | `addressing_style="path"` |
+| `SignatureDoesNotMatch` / region errors | Missing region in SigV4 scope | Pinned `signature_version="s3v4"` + `VAST_S3_REGION` |
+| Slow / failing big uploads | Tiny 8 MiB parts, low concurrency | `get_transfer_config()` → 16 MiB parts, 8 threads |
 
-This project provides a battle-tested S3 client factory (`s3_client.py`) that neutralizes VAST's compatibility gaps at the connection level, so every script you build on top of it just works. The client:
+Everything else is plain boto3, so the returned object is a normal S3 client.
 
-- Forces SigV4 signing with path-style addressing
-- Strips problematic checksum and transfer-encoding headers before every request
-- Reads file-like bodies into memory to prevent chunked encoding corruption
-- Uses adaptive retry with up to 3 attempts
+## Setup
 
-On top of that client, the repo includes standalone scripts for common S3 operations: creating buckets, uploading and downloading objects, listing contents, deleting resources, generating presigned URLs, enabling versioning, and loading data directly into pandas DataFrames.
+```bash
+git clone <this repo> && cd vast-s3-templates
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt        # or: pip install -e ".[pandas]"
+cp .env.example .env                   # then edit
+```
 
-## Quick Example
+`.env`:
 
-Upload a file and read it back into a DataFrame:
+```dotenv
+VAST_S3_ENDPOINT=https://vast-s3.example.edu   # VIP pool DNS name or IP, with scheme
+VAST_S3_ACCESS_KEY=...
+VAST_S3_SECRET_KEY=...
+VAST_S3_BUCKET=my-bucket                        # optional default for the scripts
+#VAST_S3_CA_BUNDLE=/path/to/ca.pem              # self-signed cert
+#VAST_S3_VERIFY_SSL=false                       # dev only
+```
+
+## Use the client in your own code
 
 ```python
-from s3_client import create_s3_client
-import pandas as pd
-from io import StringIO
+from vast_s3 import get_s3_client, get_transfer_config
 
-s3 = create_s3_client()
-
-# Upload
-s3.put_object(
-    Bucket="my-bucket",
-    Key="data/results.csv",
-    Body=open("results.csv", "rb").read(),
-    ContentType="text/csv"
-)
-
-# Download into pandas
-response = s3.get_object(Bucket="my-bucket", Key="data/results.csv")
-df = pd.read_csv(StringIO(response["Body"].read().decode("utf-8")))
-print(df.head())
+s3 = get_s3_client()                      # reads .env / environment
+s3.upload_file("big.bin", "my-bucket", "raw/big.bin", Config=get_transfer_config())
+print(s3.get_object(Bucket="my-bucket", Key="raw/big.bin")["ContentLength"])
 ```
 
-## Getting Started
+Higher-level helpers (pagination, batch delete, presigning, versioning) live
+in `vast_s3/ops.py`; the scripts below are thin CLIs over them.
 
-**Prerequisites:** Python 3.11+
+## Scripts
 
-**Install dependencies:**
+All scripts accept `-b/--bucket` (falls back to `VAST_S3_BUCKET`) and `-h`.
 
 ```bash
-pip install boto3 botocore python-dotenv pandas
+python scripts/create_bucket.py -b data --versioning
+python scripts/list_objects.py --buckets
+python scripts/list_objects.py raw/                       # objects under a prefix
+
+python scripts/upload.py file.csv -p raw/                 # -> raw/file.csv
+python scripts/upload.py ./dataset/ -p raw/dataset/       # recursive
+python scripts/upload.py file.csv -k exact/key.csv
+
+python scripts/download.py raw/file.csv ./out/            # single object
+python scripts/download.py raw/ ./out/ -r                 # whole prefix
+
+python scripts/presigned_url.py raw/file.csv -e 900       # GET URL, 15 min
+python scripts/presigned_url.py incoming/x.bin --put      # PUT URL
+
+python scripts/versioning.py status
+python scripts/versioning.py enable
+python scripts/versioning.py list raw/
+python scripts/versioning.py restore raw/file.csv <version-id>
+
+python scripts/delete.py raw/file.csv
+python scripts/delete.py raw/ -r -y                       # everything under prefix
+python scripts/delete.py --bucket-too -y                  # empty bucket
 ```
 
-**Configure credentials** by creating a `.env` file in the project root:
-
-```
-VAST_S3_ENDPOINT=https://your-vast-endpoint.example.com
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
-VAST_BUCKET_NAME=my-vast-bucket
-```
-
-**Run any script directly:**
+## pandas example
 
 ```bash
-cd src
-
-# Create a bucket
-python create_bucket.py
-
-# Upload an object
-python upload_object.py
-
-# List objects
-python list_objects.py
-
-# Download an object
-python download_object.py
-
-# Generate a presigned URL
-python generate_presigned_url.py
-
-# Enable bucket versioning
-python bucket_versioning.py
-
-# Upload CSV and load into pandas
-python vast_s3_data_loader.py
+pip install -e ".[pandas]"
+python examples/pandas_load.py
 ```
 
-Each script works standalone and reads configuration from environment variables.
+Shows CSV and Parquet round-trips through memory (`get_object`/`put_object`),
+and, if `s3fs` is installed, `pd.read_parquet("s3://…", storage_options=…)`
+with the same VAST workarounds passed through `config_kwargs`.
 
-## Available Templates
+## Tests
 
-| Script | What It Does |
-|---|---|
-| `s3_client.py` | Configures a VAST-compatible boto3 S3 client |
-| `create_bucket.py` | Creates a new S3 bucket |
-| `upload_object.py` | Uploads an object with explicit content-length handling |
-| `download_object.py` | Downloads an object to the local filesystem |
-| `list_objects.py` | Lists all objects in a bucket (uses V1 API for compatibility) |
-| `delete_objects.py` | Deletes individual objects or entire buckets |
-| `generate_presigned_url.py` | Creates time-limited download URLs |
-| `bucket_versioning.py` | Enables versioning on a bucket |
-| `vast_s3_data_loader.py` | End-to-end example: upload CSV, download, load into pandas |
+Runs the scripts end to end against a local
+[moto](https://github.com/getmoto/moto) server, including a 40 MiB multipart
+upload byte-compared after download.
 
-## License
+```bash
+pip install -e ".[test]"
+pytest
+```
 
-[MIT](LICENSE)
+## Notes on VAST specifics
 
-<BR>
+* **No `LocationConstraint`.** `create_bucket` is called without a
+  `CreateBucketConfiguration`; VAST rejects it.
+* **Region is cosmetic.** Any value works, but it must be the same on every
+  client that signs URLs, or presigned URLs will fail.
+* **Presigned URLs** embed `VAST_S3_ENDPOINT`. Use the DNS name your
+  recipients can reach, not an internal VIP.
+* **Object versioning** must be enabled per bucket *and* the VAST view must
+  have S3 versioning allowed. `versioning.py status` tells you the bucket
+  side.
+* **Other S3-compatible stores** (MinIO, Ceph RGW, Wasabi, etc.) have the same
+  checksum problem; this client works unchanged against them.
