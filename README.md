@@ -2,6 +2,8 @@
 
 boto3 templates that actually work against **VAST Data** S3.
 
+⭐️ Connect to the VPN and run.
+
 Stock `boto3 >= 1.36` breaks against VAST (and most non-AWS S3 backends):
 uploads come back a few bytes larger than the source with
 `x-amz-checksum-crc32:…` text leaked into the tail of the object, and
